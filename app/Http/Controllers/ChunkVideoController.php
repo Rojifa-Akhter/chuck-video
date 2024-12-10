@@ -12,7 +12,7 @@ class ChunkVideoController extends Controller
     {
         // Validate the request
         $request->validate([
-            'file' => 'required|file',
+            'file' => 'required|file|mimes:mp4,avi,zip,pdf|max:10002400',
             'fileName' => 'required|string',
             'chunkNumber' => 'required|integer',
             'totalChunks' => 'required|integer',
