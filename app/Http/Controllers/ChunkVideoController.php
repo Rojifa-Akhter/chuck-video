@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ChunkVideo;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ChunkVideoController extends Controller
 {
@@ -12,7 +11,7 @@ class ChunkVideoController extends Controller
     {
         // Validate the request
         $request->validate([
-            'file' => 'required|file|mimes:mp4,avi,zip,pdf|max:10002400',
+            'file' => 'required|file|mimes:mp4,avi,zip,pdf|max:10737418240',
             'fileName' => 'required|string',
             'chunkNumber' => 'required|integer',
             'totalChunks' => 'required|integer',
@@ -31,6 +30,11 @@ class ChunkVideoController extends Controller
         // Save the current chunk
         $chunkPath = $tempDir . '/' . $fileName . '.part' . $chunkNumber;
         file_put_contents($chunkPath, file_get_contents($request->file('file')->getRealPath()));
+
+        // Log the current chunk for debugging
+        $uploadedChunks = array_map('basename', glob($tempDir . '/*')); // List all chunks
+        $statusMessage = "Chunk {$chunkNumber}/{$totalChunks} uploaded for file {$fileName}.";
+        $statusMessage .= " Currently uploaded chunks: " . implode(', ', $uploadedChunks);
 
         // Create video record in the database if it's the first chunk
         if ($chunkNumber == 1) {
@@ -71,9 +75,16 @@ class ChunkVideoController extends Controller
                     $video->save();
                 }
             }
+
+            $statusMessage .= " All chunks merged into {$fileName}.";
         }
 
-        return response()->json(['status' => 'success']);
+        // Return response with status message and uploaded chunk details
+        return response()->json([
+            'status' => 'success',
+            'message' => $statusMessage,
+            'uploaded_chunks' => $uploadedChunks,
+        ]);
     }
 
     /**
